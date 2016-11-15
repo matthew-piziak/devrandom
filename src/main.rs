@@ -1,5 +1,12 @@
 //! A clone of `$ cat /dev/random`, i.e. a blocking pseudorandom number
 //! generator which gathers randomness from environmental noise.
+//!
+//! Architectural components:
+//! - Randomness source
+//! - Debiaser (von Neumann whitening?)
+//! - Cryptographically secure pseudorandom number generator (CSPRG)
+//!
+//! TODO: How to represent a bitstream in Rust?
 
 extern crate rand;
 use rand::Rng;
