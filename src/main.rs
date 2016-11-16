@@ -6,41 +6,45 @@
 //! - Debiaser (von Neumann whitening?)
 //! - Cryptographically secure pseudorandom number generator (CSPRG)
 
-extern crate futures;
-extern crate tokio_core;
+extern crate rand;
 
-use futures::stream;
-use tokio_core::reactor;
+use std::thread;
+use std::sync::mpsc;
+
+use rand::Rng;
 
 fn main() {
-    let randomness_source: RandomnessStream = MockRandomnessSource::new(vec![true, false, true])
-        .stream();
+    let (randomness_transmitter, randomness_receiver) = mpsc::channel();
 
-    randomness_source.for_each(|r| println!("{}", r))
-}
+    let randomness_transmitter = randomness_transmitter.clone();
 
-type RandomnessStream = stream::BoxStream<bool, RandomnessSourceError>;
+    thread::spawn(move || loop {
+        let mut rng = rand::thread_rng();
+        let bit: bool = rng.gen() && rng.gen(); // biased generator
+        println!("biased: {}", bit);
+        match randomness_transmitter.send(bit) {
+            Ok(_) => {},
+            Err(_) => {break;}
+        }
+    });
 
-enum RandomnessSourceError {}
+    let (unbiased_transmitter, unbiased_receiver) = mpsc::channel();
 
-trait RandomnessSource {
-    fn stream(&self) -> RandomnessStream;
-}
+    thread::spawn(move || loop {
+        let i = randomness_receiver.recv().unwrap();
+        let j = randomness_receiver.recv().unwrap();
+        if i == j {
+            continue;
+        } else {
+            match unbiased_transmitter.send(i) {
+                Ok(_) => {},
+                Err(_) => {break;}
+            }
+        }
+    });
 
-struct MockRandomnessSource {
-    random_data: Vec<bool>,
-}
-
-impl MockRandomnessSource {
-    fn new(random_data: Vec<bool>) -> Self {
-        MockRandomnessSource { random_data: random_data }
-    }
-}
-
-impl RandomnessSource for MockRandomnessSource {
-    fn stream(&self) -> RandomnessStream {
-        let results: Vec<Result<bool, RandomnessSourceError>> =
-            self.random_data.clone().into_iter().map(Ok).collect();
-        Box::new(stream::iter(results))
+    for _ in 0..16 {
+        let bit = unbiased_receiver.recv().unwrap();
+        println!("unbiased: {}", bit);
     }
 }
