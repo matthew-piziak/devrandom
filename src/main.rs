@@ -10,36 +10,58 @@
 
 extern crate futures;
 extern crate rand;
+extern crate tiny_keccak;
 
+use futures::future::Future;
 use futures::stream::{self, Stream};
-use futures::future::{Future};
 use rand::Rng;
+use tiny_keccak::Keccak;
 
 fn main() {
     let mut rng = rand::thread_rng();
     let mut rng2 = rand::thread_rng();
-    let random_source = rng.gen_iter().zip(rng2.gen_iter()).map(|(x, y)| x && y).take(100).map(Ok);
+    let random_source = rng.gen_iter().zip(rng2.gen_iter()).map(|(x, y)| x && y).take(1000).map(Ok);
     let bool_stream = stream::iter::<_, bool, ()>(random_source);
-    let results = bool_stream.chunks(2).filter_map(von_neumann_debiasing).collect();
-    for result in results.wait() {
-        for bit in result {
-            println!("{:?}", bit);
-        }
-    }
+    let results = bool_stream.chunks(2)
+        .filter_map(von_neumann_debiasing)
+        .chunks(8)
+        .filter_map(octet_to_byte)
+        .map(sha3)
+        .collect();
 }
 
 fn von_neumann_debiasing(mut bool_pair: Vec<bool>) -> Option<bool> {
-    if let Some(b1) = bool_pair.pop() {
-        if let Some(b2) = bool_pair.pop() {
-            if b1 != b2 {
-                Some(b1)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
+    if bool_pair.len() != 2 {
+        panic!("Von Neumann debiasing requires pairs of size 2");
+    }
+    let b1 = bool_pair.pop().unwrap();
+    let b2 = bool_pair.pop().unwrap();
+    if b1 != b2 {
+        Some(b1)
     } else {
         None
     }
+}
+
+fn octet_to_byte(bool_octet: Vec<bool>) -> Option<u8> {
+    if bool_octet.len() != 8 {
+        return None;
+    }
+    let mut byte = 0;
+    for b in bool_octet {
+        byte <<= 1;
+        if b {
+            byte += 1;
+        }
+    }
+    Some(byte)
+}
+
+fn sha3(byte: u8) -> u8 {
+    let mut sha3 = Keccak::new_sha3_256();
+    let data: Vec<u8> = vec![byte];
+    sha3.update(&data);
+    let mut res: [u8; 1] = [0; 1];
+    sha3.finalize(&mut res);
+    res[0]
 }
