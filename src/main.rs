@@ -20,14 +20,23 @@ use tiny_keccak::Keccak;
 fn main() {
     let mut rng = rand::thread_rng();
     let mut rng2 = rand::thread_rng();
-    let random_source = rng.gen_iter().zip(rng2.gen_iter()).map(|(x, y)| x && y).take(1000).map(Ok);
+    let random_source =
+        rng.gen_iter().zip(rng2.gen_iter()).map(|(x, y)| x && y).take(100_000_000).map(Ok);
     let bool_stream = stream::iter::<_, bool, ()>(random_source);
     let results = bool_stream.chunks(2)
         .filter_map(von_neumann_debiasing)
         .chunks(8)
         .filter_map(octet_to_byte)
-        .map(sha3)
+        .chunks(32)
+        .filter_map(sha3)
         .collect();
+    for result in results.wait() {
+        for output in result {
+            use std::io::{self, Write};
+            io::stdout().write(&output);
+            io::stdout().flush();
+        }
+    }
 }
 
 fn von_neumann_debiasing(mut bool_pair: Vec<bool>) -> Option<bool> {
@@ -57,11 +66,14 @@ fn octet_to_byte(bool_octet: Vec<bool>) -> Option<u8> {
     Some(byte)
 }
 
-fn sha3(byte: u8) -> u8 {
+fn sha3(input: Vec<u8>) -> Option<[u8; 32]> {
+    if input.len() != 32 {
+        return None;
+    }
     let mut sha3 = Keccak::new_sha3_256();
-    let data: Vec<u8> = vec![byte];
+    let data: Vec<u8> = From::from(input);
     sha3.update(&data);
-    let mut res: [u8; 1] = [0; 1];
+    let mut res: [u8; 32] = [0; 32];
     sha3.finalize(&mut res);
-    res[0]
+    Some(res)
 }
