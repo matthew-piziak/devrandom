@@ -28,7 +28,8 @@ fn main() {
                            .map(Ok);
     let bool_stream = stream::iter::<_, bool, ()>(random_source);
     let results = bool_stream.chunks(2)
-                             .filter_map(von_neumann_debiasing)
+                             .map(vec_to_pair)
+                             .filter_map(von_neumann_debias)
                              .chunks(8)
                              .filter_map(octet_to_byte)
                              .chunks(32)
@@ -43,12 +44,20 @@ fn main() {
     }
 }
 
-fn von_neumann_debiasing(mut bool_pair: Vec<bool>) -> Option<bool> {
-    if bool_pair.len() != 2 {
-        panic!("Von Neumann debiasing requires pairs of size 2");
+// Note: the Rust development team has a fairly late stabilization planned for
+// the genericization of arrays over length. For now we perform this
+// verification at runtime.
+fn vec_to_pair<T>(mut vec: Vec<T>) -> (T, T) {
+    if vec.len() != 2 {
+        panic!("Chunk cannot be converted to a pair");
+    } else {
+        let x = vec.pop().unwrap();
+        let y = vec.pop().unwrap();
+        (y, x)
     }
-    let b1 = bool_pair.pop().unwrap();
-    let b2 = bool_pair.pop().unwrap();
+}
+
+fn von_neumann_debias((b1, b2): (bool, bool)) -> Option<bool> {
     if b1 != b2 {
         Some(b1)
     } else {
