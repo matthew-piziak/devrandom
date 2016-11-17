@@ -11,16 +11,35 @@
 extern crate futures;
 extern crate rand;
 
-use std::thread;
-
 use futures::stream::{self, Stream};
-use futures::future::{finished, Future};
+use futures::future::{Future};
 use rand::Rng;
 
 fn main() {
     let mut rng = rand::thread_rng();
-    let random_source = rng.gen_iter().take(100).map(Ok);
-    let number_stream = stream::iter::<_, bool, ()>(random_source);
-    let sum = number_stream.fold(true, |a, b| finished(a && b));
-    println!("sum: {:?}", sum.wait());
+    let mut rng2 = rand::thread_rng();
+    let random_source = rng.gen_iter().zip(rng2.gen_iter()).map(|(x, y)| x && y).take(100).map(Ok);
+    let bool_stream = stream::iter::<_, bool, ()>(random_source);
+    let results = bool_stream.chunks(2).filter_map(von_neumann_debiasing).collect();
+    for result in results.wait() {
+        for bit in result {
+            println!("{:?}", bit);
+        }
+    }
+}
+
+fn von_neumann_debiasing(mut bool_pair: Vec<bool>) -> Option<bool> {
+    if let Some(b1) = bool_pair.pop() {
+        if let Some(b2) = bool_pair.pop() {
+            if b1 != b2 {
+                Some(b1)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    }
 }
