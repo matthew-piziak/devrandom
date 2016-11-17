@@ -5,3 +5,4 @@ authors = ["Matthew Piziak <matthew.piziak@gmail.com>"]
 
 [dependencies]
 rand = "0.3"
+futures = "0.1.3"
