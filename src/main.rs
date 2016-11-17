@@ -17,6 +17,10 @@ use futures::stream::{self, Stream};
 use rand::Rng;
 use tiny_keccak::Keccak;
 
+struct DevRandom<RandomnessSource: futures::Stream> {
+    pub randomness_source: RandomnessSource,
+}
+
 fn main() {
     let mut rng = rand::thread_rng();
     let mut rng2 = rand::thread_rng();
@@ -27,14 +31,16 @@ fn main() {
                            .take(rng_size)
                            .map(Ok);
     let bool_stream = stream::iter::<_, bool, ()>(random_source);
-    let results = bool_stream.chunks(2)
-                             .map(vec_to_pair)
-                             .filter_map(von_neumann_debias)
-                             .chunks(8)
-                             .filter_map(octet_to_byte)
-                             .chunks(32)
-                             .filter_map(sha3)
-                             .collect();
+    let dev_random = DevRandom { randomness_source: bool_stream };
+    let results = dev_random.randomness_source
+                            .chunks(2)
+                            .map(vec_to_pair)
+                            .filter_map(von_neumann_debias)
+                            .chunks(8)
+                            .filter_map(octet_to_byte)
+                            .chunks(32)
+                            .filter_map(sha3)
+                            .collect();
     for result in results.wait() {
         for output in result {
             use std::io::{self, Write};
