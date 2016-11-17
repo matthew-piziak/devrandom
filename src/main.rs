@@ -20,21 +20,25 @@ use tiny_keccak::Keccak;
 fn main() {
     let mut rng = rand::thread_rng();
     let mut rng2 = rand::thread_rng();
-    let random_source =
-        rng.gen_iter().zip(rng2.gen_iter()).map(|(x, y)| x && y).take(100_000_000).map(Ok);
+    let rng_size = 100_000_000;
+    let random_source = rng.gen_iter()
+                           .zip(rng2.gen_iter())
+                           .map(|(x, y)| x && y)
+                           .take(rng_size)
+                           .map(Ok);
     let bool_stream = stream::iter::<_, bool, ()>(random_source);
     let results = bool_stream.chunks(2)
-        .filter_map(von_neumann_debiasing)
-        .chunks(8)
-        .filter_map(octet_to_byte)
-        .chunks(32)
-        .filter_map(sha3)
-        .collect();
+                             .filter_map(von_neumann_debiasing)
+                             .chunks(8)
+                             .filter_map(octet_to_byte)
+                             .chunks(32)
+                             .filter_map(sha3)
+                             .collect();
     for result in results.wait() {
         for output in result {
             use std::io::{self, Write};
-            io::stdout().write(&output);
-            io::stdout().flush();
+            let _ = io::stdout().write(&output);
+            let _ = io::stdout().flush();
         }
     }
 }
