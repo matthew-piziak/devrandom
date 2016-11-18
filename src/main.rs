@@ -17,13 +17,12 @@ use futures::stream::{self, Stream, IterStream};
 use rand::Rng;
 use tiny_keccak::Keccak;
 
-struct DevRandom<RandomnessSource: futures::Stream> {
-    pub randomness_source: RandomnessSource,
+fn main() {
+    let randomness_source = mock_randomness_source();
+    dev_random(randomness_source);
 }
 
-type MockRandomnessSource = IterStream<std::vec::IntoIter<Result<bool, ()>>>;
-
-fn mock_dev_random() -> DevRandom<MockRandomnessSource> {
+fn mock_randomness_source() -> IterStream<std::vec::IntoIter<Result<bool, ()>>> {
     let mut rng = rand::thread_rng();
     let mut rng2 = rand::thread_rng();
     let rng_size = 100_000_000;
@@ -33,21 +32,20 @@ fn mock_dev_random() -> DevRandom<MockRandomnessSource> {
                                                   .take(rng_size)
                                                   .map(Ok)
                                                   .collect();
-    let bool_stream = stream::iter(random_source);
-    DevRandom { randomness_source: bool_stream }
+    stream::iter(random_source)
 }
 
-fn main() {
-    let dev_random = mock_dev_random();
-    let results = dev_random.randomness_source
-                            .chunks(2)
-                            .map(vec_to_pair)
-                            .filter_map(von_neumann_debias)
-                            .chunks(8)
-                            .filter_map(octet_to_byte)
-                            .chunks(32)
-                            .filter_map(sha3)
-                            .collect();
+fn dev_random<RandomnessSource>(randomness_source: RandomnessSource)
+    where RandomnessSource: futures::Stream<Item = bool>
+{
+    let results = randomness_source.chunks(2)
+                                   .map(vec_to_pair)
+                                   .filter_map(von_neumann_debias)
+                                   .chunks(8)
+                                   .filter_map(octet_to_byte)
+                                   .chunks(32)
+                                   .filter_map(sha3)
+                                   .collect();
     if let Ok(result) = results.wait() {
         for output in result {
             use std::io::{self, Write};
