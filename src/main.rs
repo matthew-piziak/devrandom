@@ -23,8 +23,7 @@ struct DevRandom<RandomnessSource: futures::Stream> {
 
 type MockRandomnessSource = IterStream<std::vec::IntoIter<Result<bool, ()>>>;
 
-fn mock_dev_random() -> DevRandom<MockRandomnessSource>
-{
+fn mock_dev_random() -> DevRandom<MockRandomnessSource> {
     let mut rng = rand::thread_rng();
     let mut rng2 = rand::thread_rng();
     let rng_size = 100_000_000;
@@ -34,7 +33,7 @@ fn mock_dev_random() -> DevRandom<MockRandomnessSource>
                                                   .take(rng_size)
                                                   .map(Ok)
                                                   .collect();
-    let bool_stream = stream::iter::<_, bool, ()>(random_source);
+    let bool_stream = stream::iter(random_source);
     DevRandom { randomness_source: bool_stream }
 }
 
