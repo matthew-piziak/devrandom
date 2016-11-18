@@ -8,12 +8,25 @@
 //! - Cryptographically secure pseudorandom number generator (CSPRG)
 //! - Entropy Counter
 
+// Note: I'm using a guided-tour style of documentation in this project. Here
+// are some reasons why:
+// - Since the readers (you!) may not be familiar with Rust, it is more
+//   important that I explain the features and idiosyncracies of the language.
+// - The readers will probably be reading this package from top to bottom,
+//   rather than jumping to specific items in their IDE.
+// - This package is an ad-hoc demonstration that is not likely to be updated,
+//   so the documentation does not need to be easy to maintain. (Naturally,
+//   maintainability of the codebase is something to be judged by. This
+//   disclaimer only pertains to the documentation, where I believe the
+//   tradeoffs are worth it.)
+
 extern crate futures;
 extern crate rand;
 extern crate tiny_keccak;
 
 use futures::future::Future;
 use futures::stream::{self, Stream};
+
 use rand::Rng;
 use tiny_keccak::Keccak;
 
@@ -32,9 +45,7 @@ impl RandomnessStream {
         RandomnessStream { stream: randomness_source }
     }
 
-    fn reverse(self) -> Self {
-        RandomnessStream { stream: Box::new(self.stream.map(|x| !x)) }
-    }
+    fn emit(self) {}
 }
 
 fn mock_randomness_source() -> BitStream {
@@ -60,7 +71,7 @@ fn dev_random(randomness_source: BitStream) {
                                    .filter_map(sha3)
                                    .collect()
                                    .wait();
-    emit(results);
+    emit(results)
 }
 
 fn emit(stream: Result<Vec<[u8; 32]>, ()>) {
