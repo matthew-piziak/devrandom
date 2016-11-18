@@ -46,6 +46,12 @@ impl RandomnessStream {
     }
 
     fn emit(self) {}
+
+    fn emit_byte(item: &[u8]) {
+        use std::io::{self, Write};
+        let _ = io::stdout().write(item);
+        let _ = io::stdout().flush();
+    }
 }
 
 fn mock_randomness_source() -> BitStream {
@@ -71,17 +77,6 @@ fn dev_random(randomness_source: BitStream) {
                                    .filter_map(sha3)
                                    .collect()
                                    .wait();
-    emit(results)
-}
-
-fn emit(stream: Result<Vec<[u8; 32]>, ()>) {
-    if let Ok(mystream) = stream {
-        for output in mystream {
-            use std::io::{self, Write};
-            let _ = io::stdout().write(&output);
-            let _ = io::stdout().flush();
-        }
-    }
 }
 
 // Note: the Rust development team has a fairly late stabilization planned for
