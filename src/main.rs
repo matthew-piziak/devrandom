@@ -17,12 +17,12 @@ use futures::stream::{self, Stream, IterStream};
 use rand::Rng;
 use tiny_keccak::Keccak;
 
+type BitStream = Box<futures::Stream<Item = bool, Error = ()>>;
+
 fn main() {
     let randomness_source = mock_randomness_source();
-    dev_random(randomness_source);
+    let randomness_stream = RandomnessStream::new(Box::new(randomness_source));
 }
-
-type BitStream = Box<futures::Stream<Item = bool, Error = ()>>;
 
 struct RandomnessStream {
     stream: BitStream,
@@ -38,7 +38,7 @@ impl RandomnessStream {
     }
 }
 
-fn mock_randomness_source() -> IterStream<std::vec::IntoIter<Result<bool, ()>>> {
+fn mock_randomness_source() -> BitStream {
     let mut rng = rand::thread_rng();
     let mut rng2 = rand::thread_rng();
     let rng_size = 100_000_000;
@@ -48,7 +48,7 @@ fn mock_randomness_source() -> IterStream<std::vec::IntoIter<Result<bool, ()>>> 
                                                   .take(rng_size)
                                                   .map(Ok)
                                                   .collect();
-    stream::iter(random_source)
+    Box::new(stream::iter(random_source))
 }
 
 fn dev_random<RandomnessSource>(randomness_source: RandomnessSource)
