@@ -50,9 +50,7 @@ fn mock_randomness_source() -> BitStream {
     Box::new(stream::iter(random_source))
 }
 
-fn dev_random(randomness_source: BitStream)
-{
-    let randomness_source = randomness_source;
+fn dev_random(randomness_source: BitStream) {
     let results = randomness_source.chunks(2)
                                    .map(vec_to_pair)
                                    .filter_map(von_neumann_debias)
@@ -62,10 +60,10 @@ fn dev_random(randomness_source: BitStream)
                                    .filter_map(sha3)
                                    .collect()
                                    .wait();
-    emit::<BitStream>(results);
+    emit(results);
 }
 
-fn emit<RandomnessSource>(stream: Result<Vec<[u8; 32]>, <RandomnessSource as futures::Stream>::Error>) where RandomnessSource: futures::Stream<Item=bool>{
+fn emit(stream: Result<Vec<[u8; 32]>, ()>) {
     if let Ok(mystream) = stream {
         for output in mystream {
             use std::io::{self, Write};
