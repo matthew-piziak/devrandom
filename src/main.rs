@@ -13,15 +13,14 @@ extern crate rand;
 extern crate tiny_keccak;
 
 use futures::future::Future;
-use futures::stream::{self, Stream, IterStream};
+use futures::stream::{self, Stream};
 use rand::Rng;
 use tiny_keccak::Keccak;
 
 type BitStream = Box<futures::Stream<Item = bool, Error = ()>>;
 
-fn main() {
-    let randomness_source = mock_randomness_source();
-    let randomness_stream = RandomnessStream::new(Box::new(randomness_source));
+fn main() {;
+    let randomness_stream = RandomnessStream::new(mock_randomness_source());
 }
 
 struct RandomnessStream {
@@ -51,9 +50,9 @@ fn mock_randomness_source() -> BitStream {
     Box::new(stream::iter(random_source))
 }
 
-fn dev_random<RandomnessSource>(randomness_source: RandomnessSource)
-    where RandomnessSource: futures::Stream<Item = bool>
+fn dev_random(randomness_source: BitStream)
 {
+    let randomness_source = randomness_source;
     let results = randomness_source.chunks(2)
                                    .map(vec_to_pair)
                                    .filter_map(von_neumann_debias)
@@ -63,7 +62,7 @@ fn dev_random<RandomnessSource>(randomness_source: RandomnessSource)
                                    .filter_map(sha3)
                                    .collect()
                                    .wait();
-    emit::<RandomnessSource>(results);
+    emit::<BitStream>(results);
 }
 
 fn emit<RandomnessSource>(stream: Result<Vec<[u8; 32]>, <RandomnessSource as futures::Stream>::Error>) where RandomnessSource: futures::Stream<Item=bool>{
