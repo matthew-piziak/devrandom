@@ -22,6 +22,22 @@ fn main() {
     dev_random(randomness_source);
 }
 
+type BitStream = Box<futures::Stream<Item = bool, Error = ()>>;
+
+struct RandomnessStream {
+    stream: BitStream,
+}
+
+impl RandomnessStream {
+    fn new(randomness_source: BitStream) -> Self {
+        RandomnessStream { stream: randomness_source }
+    }
+
+    fn reverse(self) -> Self {
+        RandomnessStream{stream: Box::new(self.stream.map(|x| !x))}
+    }
+}
+
 fn mock_randomness_source() -> IterStream<std::vec::IntoIter<Result<bool, ()>>> {
     let mut rng = rand::thread_rng();
     let mut rng2 = rand::thread_rng();
