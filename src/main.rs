@@ -25,12 +25,13 @@ extern crate rand;
 extern crate tiny_keccak;
 
 use futures::future::Future;
-use futures::stream::{self, Stream};
+use futures::stream::{self, Stream, BoxStream};
 
 use rand::Rng;
 use tiny_keccak::Keccak;
 
-type BitStream = Box<futures::Stream<Item = bool, Error = ()>>;
+type BitStream = BoxStream<bool, ()>;
+type ByteStream = BoxStream<u8, ()>;
 
 fn main() {;
     let randomness_stream = RandomnessStream::new(mock_randomness_source());
@@ -44,14 +45,16 @@ impl RandomnessStream {
     fn new(randomness_source: BitStream) -> Self {
         RandomnessStream { stream: randomness_source }
     }
+}
 
-    fn emit(self) {}
+fn emit(bytestream: ByteStream) {
 
-    fn emit_byte(item: &[u8]) {
-        use std::io::{self, Write};
-        let _ = io::stdout().write(item);
-        let _ = io::stdout().flush();
-    }
+}
+
+fn emit_byte(item: &[u8]) {
+    use std::io::{self, Write};
+    let _ = io::stdout().write(item);
+    let _ = io::stdout().flush();
 }
 
 fn mock_randomness_source() -> BitStream {
