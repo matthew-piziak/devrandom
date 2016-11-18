@@ -34,7 +34,7 @@ impl RandomnessStream {
     }
 
     fn reverse(self) -> Self {
-        RandomnessStream{stream: Box::new(self.stream.map(|x| !x))}
+        RandomnessStream { stream: Box::new(self.stream.map(|x| !x)) }
     }
 }
 
@@ -61,9 +61,14 @@ fn dev_random<RandomnessSource>(randomness_source: RandomnessSource)
                                    .filter_map(octet_to_byte)
                                    .chunks(32)
                                    .filter_map(sha3)
-                                   .collect();
-    if let Ok(result) = results.wait() {
-        for output in result {
+                                   .collect()
+                                   .wait();
+    emit::<RandomnessSource>(results);
+}
+
+fn emit<RandomnessSource>(stream: Result<Vec<[u8; 32]>, <RandomnessSource as futures::Stream>::Error>) where RandomnessSource: futures::Stream<Item=bool>{
+    if let Ok(mystream) = stream {
+        for output in mystream {
             use std::io::{self, Write};
             let _ = io::stdout().write(&output);
             let _ = io::stdout().flush();
