@@ -21,17 +21,25 @@ struct DevRandom<RandomnessSource: futures::Stream> {
     pub randomness_source: RandomnessSource,
 }
 
-fn main() {
+type B = std::vec::IntoIter<std::result::Result<bool, ()>>;
+
+fn mock_dev_random() -> DevRandom<futures::stream::IterStream<B>>
+{
     let mut rng = rand::thread_rng();
     let mut rng2 = rand::thread_rng();
     let rng_size = 100_000_000;
-    let random_source = rng.gen_iter()
-                           .zip(rng2.gen_iter())
-                           .map(|(x, y)| x && y)
-                           .take(rng_size)
-                           .map(Ok);
+    let random_source: Vec<Result<bool, ()>> = rng.gen_iter()
+                                                  .zip(rng2.gen_iter())
+                                                  .map(|(x, y)| x && y)
+                                                  .take(rng_size)
+                                                  .map(Ok)
+                                                  .collect();
     let bool_stream = stream::iter::<_, bool, ()>(random_source);
-    let dev_random = DevRandom { randomness_source: bool_stream };
+    DevRandom { randomness_source: bool_stream }
+}
+
+fn main() {
+    let dev_random = mock_dev_random();
     let results = dev_random.randomness_source
                             .chunks(2)
                             .map(vec_to_pair)
