@@ -13,7 +13,7 @@ extern crate rand;
 extern crate tiny_keccak;
 
 use futures::future::Future;
-use futures::stream::{self, Stream};
+use futures::stream::{self, Stream, IterStream};
 use rand::Rng;
 use tiny_keccak::Keccak;
 
@@ -21,9 +21,9 @@ struct DevRandom<RandomnessSource: futures::Stream> {
     pub randomness_source: RandomnessSource,
 }
 
-type B = std::vec::IntoIter<std::result::Result<bool, ()>>;
+type MockRandomnessSource = IterStream<std::vec::IntoIter<Result<bool, ()>>>;
 
-fn mock_dev_random() -> DevRandom<futures::stream::IterStream<B>>
+fn mock_dev_random() -> DevRandom<MockRandomnessSource>
 {
     let mut rng = rand::thread_rng();
     let mut rng2 = rand::thread_rng();
@@ -49,7 +49,7 @@ fn main() {
                             .chunks(32)
                             .filter_map(sha3)
                             .collect();
-    for result in results.wait() {
+    if let Ok(result) = results.wait() {
         for output in result {
             use std::io::{self, Write};
             let _ = io::stdout().write(&output);
