@@ -24,7 +24,7 @@ extern crate futures;
 extern crate rand;
 extern crate tiny_keccak;
 
-use futures::future::Future;
+use futures::Future;
 use futures::stream::{self, Stream, BoxStream};
 
 use rand::Rng;
@@ -32,54 +32,48 @@ use tiny_keccak::Keccak;
 
 type BitStream = BoxStream<bool, ()>;
 type ByteStream = BoxStream<u8, ()>;
+type HashedStream = BoxStream<[u8; 32], ()>;
 
-fn main() {;
-    let randomness_stream = RandomnessStream::new(mock_randomness_source());
+fn main() {
+    let randomness_stream = mock_randomness_source();
+    dev_random(randomness_stream);
 }
 
-struct RandomnessStream {
-    stream: BitStream,
+fn emit(bytestream: HashedStream) {
+    let result = bytestream.for_each(emit_item);
+    let _ = result.wait();
 }
 
-impl RandomnessStream {
-    fn new(randomness_source: BitStream) -> Self {
-        RandomnessStream { stream: randomness_source }
-    }
-}
-
-fn emit(bytestream: ByteStream) {
-
-}
-
-fn emit_byte(item: &[u8]) {
+fn emit_item(item: [u8; 32]) -> Result<(), ()> {
     use std::io::{self, Write};
-    let _ = io::stdout().write(item);
-    let _ = io::stdout().flush();
+    io::stdout().write(&item).unwrap();
+    io::stdout().flush().unwrap();
+    Ok(())
 }
+
 
 fn mock_randomness_source() -> BitStream {
     let mut rng = rand::thread_rng();
     let mut rng2 = rand::thread_rng();
     let rng_size = 100_000_000;
     let random_source: Vec<Result<bool, ()>> = rng.gen_iter()
-                                                  .zip(rng2.gen_iter())
-                                                  .map(|(x, y)| x && y)
-                                                  .take(rng_size)
-                                                  .map(Ok)
-                                                  .collect();
+        .zip(rng2.gen_iter())
+        .map(|(x, y)| x && y)
+        .take(rng_size)
+        .map(Ok)
+        .collect();
     Box::new(stream::iter(random_source))
 }
 
 fn dev_random(randomness_source: BitStream) {
-    let results = randomness_source.chunks(2)
-                                   .map(vec_to_pair)
-                                   .filter_map(von_neumann_debias)
-                                   .chunks(8)
-                                   .filter_map(octet_to_byte)
-                                   .chunks(32)
-                                   .filter_map(sha3)
-                                   .collect()
-                                   .wait();
+    let results: HashedStream = Box::new(randomness_source.chunks(2)
+        .map(vec_to_pair)
+        .filter_map(von_neumann_debias)
+        .chunks(8)
+        .filter_map(octet_to_byte)
+        .chunks(32)
+        .filter_map(sha3));
+    emit(results);
 }
 
 // Note: the Rust development team has a fairly late stabilization planned for
