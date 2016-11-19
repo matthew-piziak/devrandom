@@ -21,11 +21,11 @@
 //   tradeoffs are worth it.)
 
 extern crate futures;
-extern crate glutin;
 extern crate rand;
 extern crate tiny_keccak;
 
-use futures::Future;
+use futures::task::Task;
+use futures::{Async, Future, Poll};
 use futures::stream::{self, Stream, BoxStream};
 
 use rand::Rng;
@@ -36,13 +36,12 @@ type ByteStream = BoxStream<u8, ()>;
 type HashedStream = BoxStream<[u8; 32], ()>;
 
 fn main() {
-    let randomness_stream = mock_randomness_source();
+    let randomness_stream = counter_randomness_source();
     dev_random(randomness_stream);
 }
 
 fn emit(bytestream: HashedStream) {
-    let result = bytestream.for_each(emit_item);
-    let _ = result.wait();
+    bytestream.for_each(emit_item).wait();
 }
 
 fn emit_item(item: [u8; 32]) -> Result<(), ()> {
@@ -66,26 +65,34 @@ fn mock_randomness_source() -> BitStream {
     Box::new(stream::iter(random_source))
 }
 
-fn left_mouse_button_randomness_source() -> BitStream {
-    let mut window = glutin::WindowBuilder::new().build().unwrap();
-    window.set_title("A fantastic window!");
-    window.set_window_resize_callback(Some(resize_callback as fn(u32, u32)));
-    let _ = unsafe { window.make_current() };
+fn counter_randomness_source() -> BitStream {
+    let counter_stream = CounterStream {index: 0, limit: 440000};
+    Box::new(counter_stream)
+}
 
-    println!("Pixel format of the window: {:?}",
-             window.get_pixel_format());
+struct CounterStream {
+    index: i32,
+    limit: i32,
+}
 
-    let context = support::load(&window);
+fn counter(limit: i32) -> CounterStream {
+    CounterStream {
+        index: 0,
+        limit: limit,
+    }
+}
 
-    for event in window.wait_events() {
-        context.draw_frame((0.0, 1.0, 0.0, 1.0));
-        let _ = window.swap_buffers();
+impl Stream for CounterStream {
+    type Item = bool;
+    type Error = ();
 
-        println!("{:?}", event);
-
-        match event {
-
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        if self.index == self.limit {
+            return Ok(Async::Ready(None))
         }
+        let v = self.index % 2 == 0;
+        self.index += 1;
+        Ok(Async::Ready(Some(v)))
     }
 }
 
