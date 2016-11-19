@@ -86,6 +86,8 @@ impl Stream for CounterStream {
     type Item = bool;
     type Error = ();
 
+    // use not-ready to wait for more randomness if possible; the core engine
+    // may need to be used here
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         if self.index == self.limit {
             return Ok(Async::Ready(None))
