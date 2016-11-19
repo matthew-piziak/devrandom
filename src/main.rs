@@ -21,6 +21,7 @@
 //   tradeoffs are worth it.)
 
 extern crate futures;
+extern crate glutin;
 extern crate rand;
 extern crate tiny_keccak;
 
@@ -63,6 +64,29 @@ fn mock_randomness_source() -> BitStream {
         .map(Ok)
         .collect();
     Box::new(stream::iter(random_source))
+}
+
+fn left_mouse_button_randomness_source() -> BitStream {
+    let mut window = glutin::WindowBuilder::new().build().unwrap();
+    window.set_title("A fantastic window!");
+    window.set_window_resize_callback(Some(resize_callback as fn(u32, u32)));
+    let _ = unsafe { window.make_current() };
+
+    println!("Pixel format of the window: {:?}",
+             window.get_pixel_format());
+
+    let context = support::load(&window);
+
+    for event in window.wait_events() {
+        context.draw_frame((0.0, 1.0, 0.0, 1.0));
+        let _ = window.swap_buffers();
+
+        println!("{:?}", event);
+
+        match event {
+
+        }
+    }
 }
 
 fn dev_random(randomness_source: BitStream) {
