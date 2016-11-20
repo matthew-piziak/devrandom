@@ -37,9 +37,16 @@ type HashedStream = BoxStream<[u8; 32], ()>;
 
 fn main() {
     let mut core = Core::new().unwrap();
-    let randomness_stream: BitStream = bad_randomness_source();
-    let output_stream = dev_random(randomness_stream);
-    core.run(output_stream.for_each(emit_item)).unwrap();
+    let randomness_stream: BitStream = sawtooth();
+    core.run(randomness_stream.chunks(2)
+                              .map(vec_to_pair)
+                              .filter_map(von_neumann_debias)
+                              .chunks(8)
+                              .filter_map(octet_to_byte)
+                              .chunks(32)
+                              .filter_map(sha3)
+                              .for_each(emit_item))
+        .unwrap();
 }
 
 fn emit_item(item: [u8; 32]) -> Result<(), ()> {
@@ -49,12 +56,33 @@ fn emit_item(item: [u8; 32]) -> Result<(), ()> {
     Ok(())
 }
 
-// fn mock_randomness_source() -> BitStream {
-//     Box::new(RandStream { rng: rand::thread_rng() })
-// }
+fn mock_randomness_source() -> BitStream {
+    Box::new(RandStream { rng: rand::thread_rng() })
+}
 
-fn bad_randomness_source() -> BitStream {
+fn sawtooth() -> BitStream {
+    let sawtooth_stream = SawtoothStream {switch: false};
+    println!("sawtooth");
+    Box::new(sawtooth_stream)
+}
+
+struct SawtoothStream {
+    switch: bool,
+}
+
+impl Stream for SawtoothStream {
+    type Item = bool;
+    type Error = ();
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        self.switch = !self.switch;
+        Ok(Async::Ready(Some(self.switch)))
+    }
+}
+
+fn constant_true_source() -> BitStream {
     let constant_stream = ConstantStream { constant: true };
+    println!("in constant_true_source");
     Box::new(constant_stream)
 }
 
@@ -98,16 +126,6 @@ impl Stream for ConstantStream {
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         Ok(Async::Ready(Some(self.constant)))
     }
-}
-
-fn dev_random(randomness_source: BitStream) -> HashedStream {
-    Box::new(randomness_source.chunks(2)
-                              .map(vec_to_pair)
-                              .filter_map(von_neumann_debias)
-                              .chunks(8)
-                              .filter_map(octet_to_byte)
-                              .chunks(32)
-                              .filter_map(sha3))
 }
 
 // Note: the Rust development team has a fairly late stabilization planned for
