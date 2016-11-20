@@ -37,17 +37,9 @@ type HashedStream = BoxStream<[u8; 32], ()>;
 
 fn main() {
     let mut core = Core::new().unwrap();
-    let randomness_stream = mock_randomness_source();
-    core.run(randomness_stream.for_each(|b| {
-            println!("bool_received: {}", b);
-            Ok(())
-        }))
-        .unwrap();
-
-}
-
-fn emit(bytestream: HashedStream) {
-    let _ = bytestream.for_each(emit_item).wait();
+    let randomness_stream: BitStream = mock_randomness_source();
+    let output_stream = dev_random(randomness_stream);
+    core.run(output_stream.for_each(emit_item)).unwrap();
 }
 
 fn emit_item(item: [u8; 32]) -> Result<(), ()> {
@@ -118,15 +110,14 @@ impl Stream for ConstantStream {
     }
 }
 
-fn dev_random(randomness_source: BitStream) {
-    let results: HashedStream = Box::new(randomness_source.chunks(2)
-                                                          .map(vec_to_pair)
-                                                          .filter_map(von_neumann_debias)
-                                                          .chunks(8)
-                                                          .filter_map(octet_to_byte)
-                                                          .chunks(32)
-                                                          .filter_map(sha3));
-    emit(results);
+fn dev_random(randomness_source: BitStream) -> HashedStream {
+    Box::new(randomness_source.chunks(2)
+                              .map(vec_to_pair)
+                              .filter_map(von_neumann_debias)
+                              .chunks(8)
+                              .filter_map(octet_to_byte)
+                              .chunks(32)
+                              .filter_map(sha3))
 }
 
 // Note: the Rust development team has a fairly late stabilization planned for
