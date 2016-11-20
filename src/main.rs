@@ -37,7 +37,7 @@ type HashedStream = BoxStream<[u8; 32], ()>;
 
 fn main() {
     let mut core = Core::new().unwrap();
-    let randomness_stream: BitStream = mock_randomness_source();
+    let randomness_stream: BitStream = bad_randomness_source();
     let output_stream = dev_random(randomness_stream);
     core.run(output_stream.for_each(emit_item)).unwrap();
 }
@@ -49,19 +49,9 @@ fn emit_item(item: [u8; 32]) -> Result<(), ()> {
     Ok(())
 }
 
-
-fn mock_randomness_source() -> BitStream {
-    let mut rng = rand::thread_rng();
-    let mut rng2 = rand::thread_rng();
-    let rng_size = 100_000_000;
-    let random_source: Vec<Result<bool, ()>> = rng.gen_iter()
-                                                  .zip(rng2.gen_iter())
-                                                  .map(|(x, y)| x && y)
-                                                  .take(rng_size)
-                                                  .map(Ok)
-                                                  .collect();
-    Box::new(stream::iter(random_source))
-}
+// fn mock_randomness_source() -> BitStream {
+//     Box::new(RandStream { rng: rand::thread_rng() })
+// }
 
 fn bad_randomness_source() -> BitStream {
     let constant_stream = ConstantStream { constant: true };
@@ -143,7 +133,7 @@ fn von_neumann_debias((b1, b2): (bool, bool)) -> Option<bool> {
 
 fn octet_to_byte(bool_octet: Vec<bool>) -> Option<u8> {
     if bool_octet.len() != 8 {
-        return None;
+        panic!("Not enough bits for a byte");
     }
     let mut byte = 0;
     for b in bool_octet {
@@ -157,7 +147,7 @@ fn octet_to_byte(bool_octet: Vec<bool>) -> Option<u8> {
 
 fn sha3(input: Vec<u8>) -> Option<[u8; 32]> {
     if input.len() != 32 {
-        return None;
+        panic!("Not enough byte to hash");
     }
     let mut sha3 = Keccak::new_sha3_256();
     let data: Vec<u8> = From::from(input);
