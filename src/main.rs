@@ -37,7 +37,7 @@ type HashedStream = BoxStream<[u8; 32], ()>;
 
 fn main() {
     let mut core = Core::new().unwrap();
-    let randomness_stream: BitStream = sawtooth();
+    let randomness_stream: BitStream = mock_randomness_source();
     core.run(randomness_stream.chunks(2)
                               .map(vec_to_pair)
                               .filter_map(von_neumann_debias)
@@ -57,7 +57,7 @@ fn emit_item(item: [u8; 32]) -> Result<(), ()> {
 }
 
 fn mock_randomness_source() -> BitStream {
-    Box::new(RandStream { rng: rand::thread_rng() })
+    Box::new(RandStream { rng: rand::OsRng::new().unwrap() })
 }
 
 fn sawtooth() -> BitStream {
@@ -87,7 +87,7 @@ fn constant_true_source() -> BitStream {
 }
 
 struct RandStream {
-    rng: rand::ThreadRng,
+    rng: rand::OsRng,
 }
 
 impl Stream for RandStream {
