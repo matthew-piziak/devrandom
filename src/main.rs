@@ -37,11 +37,12 @@ type HashedStream = BoxStream<[u8; 32], ()>;
 
 fn main() {
     let mut core = Core::new().unwrap();
-    let randomness_stream = bad_randomness_source();
+    let randomness_stream = mock_randomness_source();
     core.run(randomness_stream.for_each(|b| {
-        println!("bool_received: {}", b);
-        Ok(())
-    })).unwrap();
+            println!("bool_received: {}", b);
+            Ok(())
+        }))
+        .unwrap();
 
 }
 
@@ -62,17 +63,46 @@ fn mock_randomness_source() -> BitStream {
     let mut rng2 = rand::thread_rng();
     let rng_size = 100_000_000;
     let random_source: Vec<Result<bool, ()>> = rng.gen_iter()
-        .zip(rng2.gen_iter())
-        .map(|(x, y)| x && y)
-        .take(rng_size)
-        .map(Ok)
-        .collect();
+                                                  .zip(rng2.gen_iter())
+                                                  .map(|(x, y)| x && y)
+                                                  .take(rng_size)
+                                                  .map(Ok)
+                                                  .collect();
     Box::new(stream::iter(random_source))
 }
 
 fn bad_randomness_source() -> BitStream {
-    let constant_stream = ConstantStream {constant: true};
+    let constant_stream = ConstantStream { constant: true };
     Box::new(constant_stream)
+}
+
+struct RandStream {
+    rng: rand::ThreadRng,
+}
+
+impl Stream for RandStream {
+    type Item = bool;
+    type Error = ();
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        Ok(Async::Ready(Some(self.rng.gen())))
+    }
+}
+
+struct BiasedRandStream {
+    rng: rand::ThreadRng,
+}
+
+impl Stream for BiasedRandStream {
+    type Item = bool;
+    type Error = ();
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        let b1 = self.rng.gen();
+        let b2 = self.rng.gen();
+        let product = b1 && b2;
+        Ok(Async::Ready(Some(product)))
+    }
 }
 
 struct ConstantStream {
@@ -90,12 +120,12 @@ impl Stream for ConstantStream {
 
 fn dev_random(randomness_source: BitStream) {
     let results: HashedStream = Box::new(randomness_source.chunks(2)
-        .map(vec_to_pair)
-        .filter_map(von_neumann_debias)
-        .chunks(8)
-        .filter_map(octet_to_byte)
-        .chunks(32)
-        .filter_map(sha3));
+                                                          .map(vec_to_pair)
+                                                          .filter_map(von_neumann_debias)
+                                                          .chunks(8)
+                                                          .filter_map(octet_to_byte)
+                                                          .chunks(32)
+                                                          .filter_map(sha3));
     emit(results);
 }
 
