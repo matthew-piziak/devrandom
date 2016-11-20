@@ -23,25 +23,30 @@
 extern crate futures;
 extern crate rand;
 extern crate tiny_keccak;
+extern crate tokio_core;
 
-use futures::task::Task;
-use futures::{Async, Future, Poll};
 use futures::stream::{self, Stream, BoxStream};
-
+use futures::{Async, Future, Poll};
 use rand::Rng;
 use tiny_keccak::Keccak;
+use tokio_core::reactor::Core;
 
 type BitStream = BoxStream<bool, ()>;
 type ByteStream = BoxStream<u8, ()>;
 type HashedStream = BoxStream<[u8; 32], ()>;
 
 fn main() {
-    let randomness_stream = counter_randomness_source();
-    dev_random(randomness_stream);
+    let mut core = Core::new().unwrap();
+    let randomness_stream = bad_randomness_source();
+    core.run(randomness_stream.for_each(|b| {
+        println!("bool_received: {}", b);
+        Ok(())
+    })).unwrap();
+
 }
 
 fn emit(bytestream: HashedStream) {
-    bytestream.for_each(emit_item).wait();
+    let _ = bytestream.for_each(emit_item).wait();
 }
 
 fn emit_item(item: [u8; 32]) -> Result<(), ()> {
@@ -65,36 +70,21 @@ fn mock_randomness_source() -> BitStream {
     Box::new(stream::iter(random_source))
 }
 
-fn counter_randomness_source() -> BitStream {
-    let counter_stream = CounterStream {index: 0, limit: 440000};
-    Box::new(counter_stream)
+fn bad_randomness_source() -> BitStream {
+    let constant_stream = ConstantStream {constant: true};
+    Box::new(constant_stream)
 }
 
-struct CounterStream {
-    index: i32,
-    limit: i32,
+struct ConstantStream {
+    constant: bool,
 }
 
-fn counter(limit: i32) -> CounterStream {
-    CounterStream {
-        index: 0,
-        limit: limit,
-    }
-}
-
-impl Stream for CounterStream {
+impl Stream for ConstantStream {
     type Item = bool;
     type Error = ();
 
-    // use not-ready to wait for more randomness if possible; the core engine
-    // may need to be used here
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        if self.index == self.limit {
-            return Ok(Async::Ready(None))
-        }
-        let v = self.index % 2 == 0;
-        self.index += 1;
-        Ok(Async::Ready(Some(v)))
+        Ok(Async::Ready(Some(self.constant)))
     }
 }
 
