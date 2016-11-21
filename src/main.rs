@@ -54,14 +54,14 @@ fn main() {
 fn generate_entropy<RandomnessSource>(randomness_source: RandomnessSource)
     where RandomnessSource: Stream<Item = bool, Error = ()>
 {
-    // Initialize the event loop.
+    // initialize the event loop
     let mut core = Core::new().unwrap();
 
-    // Debias the source of randomness.
+    // debias the source of randomness
     let debiased_randomness_source = debias(randomness_source);
 
-    // Pack the debiased stream into chunks of 32 bytes, run those chunks through a cryptographic
-    // hash function, and then output them.
+    // pack the debiased stream into chunks of 32 bytes, run those chunks
+    // through a cryptographic hash function, and then output them
     core.run(debiased_randomness_source.chunks(8)
             .filter_map(octet_to_byte)
             .chunks(32)

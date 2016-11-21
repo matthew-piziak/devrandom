@@ -1,4 +1,4 @@
-Hello Symbio.nt! Here is a clone of `$ cat /dev/random`, i.e. a blocking
+Hello Symbiont! Here is a clone of `$ cat /dev/random`, i.e. a blocking
 pseudorandom number generator which gathers randomness from environmental
 noise.
 
