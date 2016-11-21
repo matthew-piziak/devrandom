@@ -60,8 +60,8 @@ fn generate_entropy<RandomnessSource>(randomness_source: RandomnessSource)
     // debias the source of randomness
     let debiased_randomness_source = debias(randomness_source);
 
-    // pack the debiased stream into chunks of 32 bytes, run those chunks
-    // through a cryptographic hash function, and then output them
+    // pack the debiased stream into chunks of 32 bytes, run those chunks through a cryptographic
+    // hash function, and then output them
     core.run(debiased_randomness_source.chunks(8)
             .filter_map(octet_to_byte)
             .chunks(32)
@@ -77,9 +77,8 @@ fn debias<RandomnessStream: Stream<Item = bool, Error = ()>>
     randomness_stream.chunks(2).map(vec_to_pair).filter_map(von_neumann_debias)
 }
 
-// Note: the Rust development team has a fairly late stabilization planned for
-// the genericization of arrays over length. For now we perform this
-// verification at runtime.
+// Note: the Rust development team has a fairly late stabilization planned for the genericization
+// of arrays over length. For now we perform this verification at runtime.
 fn vec_to_pair<T>(mut vec: Vec<T>) -> (T, T) {
     if vec.len() != 2 {
         panic!("Chunk cannot be converted to a pair");

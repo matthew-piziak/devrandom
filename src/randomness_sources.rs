@@ -23,9 +23,9 @@ impl MouseStream {
     }
 }
 
-// Using this stream requires the presence of the xdotool utility.
-// xdotool is usually present on Linux systems. On OSX it can be installed with
-// `brew install homebrew/x11/xdotool`, but it may not behave reliably.
+// Using this stream requires the presence of the xdotool utility. xdotool is usually present on
+// Linux systems. On OSX it can be installed with `brew install homebrew/x11/xdotool`, but it may
+// not behave reliably.
 impl Stream for MouseStream {
     type Item = bool;
     type Error = ();
@@ -38,7 +38,7 @@ impl Stream for MouseStream {
             .expect("failed to find mouse position");
         let mouse_position = output.stdout;
 
-        // XOR-fold the output; easier than parsing and just as good
+        // XOR-fold the output; easier than parsing and just as good for our purposes
         let xor_fold = mouse_position.iter().fold(0, |acc, v| acc ^ v);
         Ok(Async::Ready(Some(xor_fold % 2 == 0)))
     }
