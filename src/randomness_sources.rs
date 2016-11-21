@@ -7,6 +7,12 @@ use rand::{OsRng, Rng};
 use std::process::Command;
 
 // A stream which uses the mouse cursor location as a source of randomness.
+//
+// Note: this is the most realistic source of randomness for this application since it uses user
+// input as a true source of "unknown" events. The other streams in this module are either
+// deterministic, or are cheating by using operating-system-provided randomness. That said, I am
+// not a cryptographer, and I certainly don't claim that the use of mouse input makes this a secure
+// system.
 #[allow(dead_code)]
 pub struct MouseStream {}
 
@@ -17,6 +23,9 @@ impl MouseStream {
     }
 }
 
+// Using this stream requires the presence of the xdotool utility.
+// xdotool is usually present on Linux systems. On OSX it can be installed with
+// `brew install homebrew/x11/xdotool`, but it may not behave reliably.
 impl Stream for MouseStream {
     type Item = bool;
     type Error = ();
@@ -92,11 +101,11 @@ pub struct SawtoothStream {
 #[allow(dead_code)]
 impl SawtoothStream {
     pub fn new() -> Self {
-        SawtoothStream {switch: false}
+        SawtoothStream { switch: false }
     }
 
     fn with(switch: bool) -> Self {
-        SawtoothStream {switch: switch}
+        SawtoothStream { switch: switch }
     }
 }
 
@@ -111,7 +120,7 @@ impl Stream for SawtoothStream {
 }
 
 // A constant boolean stream.
-// Note: von Neumann debiasing on this stream will cause random output to block forever.
+// Note: von Neumann debiasing on this stream will cause output to block forever.
 #[allow(dead_code)]
 pub struct ConstantStream {
     constant: bool,
@@ -120,11 +129,11 @@ pub struct ConstantStream {
 #[allow(dead_code)]
 impl ConstantStream {
     pub fn new() -> Self {
-        ConstantStream {constant: true}
+        ConstantStream { constant: true }
     }
 
     fn with(constant: bool) -> Self {
-        ConstantStream {constant: constant}
+        ConstantStream { constant: constant }
     }
 }
 

@@ -35,7 +35,9 @@ use tiny_keccak::Keccak;
 mod randomness_sources;
 
 fn main() {
+    // other sources of randomness can be substituted here
     let randomness_source = randomness_sources::RandStream::new();
+
     generate_entropy(randomness_source);
 }
 
