@@ -42,8 +42,7 @@ fn start<RandomnessSource>(randomness_source: RandomnessSource)
 {
     let mut core = Core::new().unwrap();
     let debiased_randomness_source = debias(randomness_source);
-    core.run(debiased_randomness_source
-            .chunks(8)
+    core.run(debiased_randomness_source.chunks(8)
             .filter_map(octet_to_byte)
             .chunks(32)
             .filter_map(sha3)
@@ -51,8 +50,9 @@ fn start<RandomnessSource>(randomness_source: RandomnessSource)
         .unwrap();
 }
 
-fn debias<RandomnessStream: Stream<Item = bool, Error = ()>>(randomness_stream: RandomnessStream) -> impl Stream<Item=bool, Error=()>
-{
+fn debias<RandomnessStream: Stream<Item = bool, Error = ()>>
+    (randomness_stream: RandomnessStream)
+     -> impl Stream<Item = bool, Error = ()> {
     randomness_stream.chunks(2).map(vec_to_pair).filter_map(von_neumann_debias)
 }
 
@@ -77,11 +77,7 @@ fn vec_to_pair<T>(mut vec: Vec<T>) -> (T, T) {
 }
 
 fn von_neumann_debias((b1, b2): (bool, bool)) -> Option<bool> {
-    if b1 != b2 {
-        Some(b1)
-    } else {
-        None
-    }
+    if b1 != b2 { Some(b1) } else { None }
 }
 
 fn octet_to_byte(bool_octet: Vec<bool>) -> Option<u8> {
