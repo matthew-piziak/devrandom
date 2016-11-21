@@ -25,27 +25,23 @@ extern crate rand;
 extern crate tiny_keccak;
 extern crate tokio_core;
 
-use futures::stream::{self, Stream, BoxStream};
-use futures::{Async, Future, Poll};
-use rand::Rng;
+use futures::stream::Stream;
 use tiny_keccak::Keccak;
 use tokio_core::reactor::Core;
 
-type BitStream = BoxStream<bool, ()>;
-type ByteStream = BoxStream<u8, ()>;
-type HashedStream = BoxStream<[u8; 32], ()>;
+mod randomness_sources;
 
 fn main() {
     let mut core = Core::new().unwrap();
-    let randomness_stream: BitStream = mock_randomness_source();
+    let randomness_stream = randomness_sources::MouseStream::new();
     core.run(randomness_stream.chunks(2)
-                              .map(vec_to_pair)
-                              .filter_map(von_neumann_debias)
-                              .chunks(8)
-                              .filter_map(octet_to_byte)
-                              .chunks(32)
-                              .filter_map(sha3)
-                              .for_each(emit_item))
+            .map(vec_to_pair)
+            .filter_map(von_neumann_debias)
+            .chunks(8)
+            .filter_map(octet_to_byte)
+            .chunks(32)
+            .filter_map(sha3)
+            .for_each(emit_item))
         .unwrap();
 }
 
@@ -54,78 +50,6 @@ fn emit_item(item: [u8; 32]) -> Result<(), ()> {
     io::stdout().write(&item).unwrap();
     io::stdout().flush().unwrap();
     Ok(())
-}
-
-fn mock_randomness_source() -> BitStream {
-    Box::new(RandStream { rng: rand::OsRng::new().unwrap() })
-}
-
-fn sawtooth() -> BitStream {
-    let sawtooth_stream = SawtoothStream {switch: false};
-    println!("sawtooth");
-    Box::new(sawtooth_stream)
-}
-
-struct SawtoothStream {
-    switch: bool,
-}
-
-impl Stream for SawtoothStream {
-    type Item = bool;
-    type Error = ();
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        self.switch = !self.switch;
-        Ok(Async::Ready(Some(self.switch)))
-    }
-}
-
-fn constant_true_source() -> BitStream {
-    let constant_stream = ConstantStream { constant: true };
-    println!("in constant_true_source");
-    Box::new(constant_stream)
-}
-
-struct RandStream {
-    rng: rand::OsRng,
-}
-
-impl Stream for RandStream {
-    type Item = bool;
-    type Error = ();
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        Ok(Async::Ready(Some(self.rng.gen())))
-    }
-}
-
-struct BiasedRandStream {
-    rng: rand::ThreadRng,
-}
-
-impl Stream for BiasedRandStream {
-    type Item = bool;
-    type Error = ();
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        let b1 = self.rng.gen();
-        let b2 = self.rng.gen();
-        let product = b1 && b2;
-        Ok(Async::Ready(Some(product)))
-    }
-}
-
-struct ConstantStream {
-    constant: bool,
-}
-
-impl Stream for ConstantStream {
-    type Item = bool;
-    type Error = ();
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        Ok(Async::Ready(Some(self.constant)))
-    }
 }
 
 // Note: the Rust development team has a fairly late stabilization planned for
