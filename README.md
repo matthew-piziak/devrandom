@@ -38,3 +38,13 @@ Here is a sample of what I considered satisfactory `ent` output:
     Arithmetic mean value of data bytes is 127.4323 (127.5 = random).
     Monte Carlo value for Pi is 3.136969507 (error 0.15 percent).
     Serial correlation coefficient is -0.000917 (totally uncorrelated = 0.0).
+
+# A Note on Mouse-cursor-generated Randomness
+
+If you replace `RandStream` with `MouseStream` in `main.rs`, you'll have to move
+the mouse around for at least a few seconds before seeing output.
+
+This is because:
+- the generator is blocking
+- the cursor position does not provide a large number of bits
+- output from a nonmoving mouse will be thrown away by the debiaser
