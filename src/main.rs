@@ -42,7 +42,7 @@ fn main() {
 }
 
 // Our entropy generation has three components:
-// 1. A source of randomness that is unlikely to be replicable by an adversary.
+// 1. A source of randomness that is (ostensibly) unlikely to be replicable by an adversary.
 // 2. A debiaser (a.k.a. whitener, decorrelator)
 // 3. A cryptographic hash function to make the internal state of the program difficult to
 //    determine from its output.

@@ -10,8 +10,8 @@ run` in the project directory.
 
 # Design
 
-In lieu of a top-level design document, I have decided to use a guided-tour
-style of documentation in the code itself. `main.rs` is the right place to start
+In lieu of a top-level design document, I've decided to use a guided-tour style
+of documentation in the code itself. `main.rs` is the right place to start
 reading.
 
 # Next Steps
