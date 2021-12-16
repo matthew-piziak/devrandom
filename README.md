@@ -1,6 +1,5 @@
-Hello Symbiont! Here is a clone of `$ cat /dev/random`, i.e. a blocking
-pseudorandom number generator which gathers randomness from environmental
-noise.
+A clone of `$ cat /dev/random`, i.e. a blocking pseudorandom number generator which gathers randomness from
+environmental noise. It was quickly written as an exercise, and should not be used.
 
 # Compilation
 
